@@ -25,6 +25,389 @@
 
 ## Question 1. How do you design consistent RESTful endpoints?
 
+## Direct Answer
+
+Designing consistent RESTful endpoints means using predictable URL structures, appropriate HTTP methods, standard status codes, consistent naming conventions, and uniform request/response formats. A well-designed REST API should be intuitive so that clients can easily understand and use it without extensive documentation.
+
+---
+
+# Detailed Explanation
+
+Consistency is one of the most important qualities of a REST API. It improves readability, maintainability, scalability, and developer experience.
+
+## 1. Use Nouns, Not Verbs
+
+Endpoints should represent **resources**, while HTTP methods define the action.
+
+### ✅ Good
+
+```http
+GET    /users
+GET    /users/123
+POST   /users
+PUT    /users/123
+PATCH  /users/123
+DELETE /users/123
+```
+
+### ❌ Bad
+
+```http
+GET    /getUsers
+POST   /createUser
+POST   /deleteUser
+```
+
+The URL identifies the resource, and the HTTP method specifies the operation.
+
+---
+
+## 2. Use Proper HTTP Methods
+
+| Method | Purpose                   | Idempotent |
+| ------ | ------------------------- | ---------- |
+| GET    | Retrieve data             | ✅         |
+| POST   | Create resource           | ❌         |
+| PUT    | Replace entire resource   | ✅         |
+| PATCH  | Partially update resource | ❌         |
+| DELETE | Remove resource           | ✅         |
+
+Example:
+
+```http
+GET    /products
+POST   /products
+GET    /products/25
+PATCH  /products/25
+DELETE /products/25
+```
+
+---
+
+## 3. Use Plural Resource Names
+
+Prefer plural nouns for collections.
+
+```http
+/users
+/orders
+/products
+/books
+```
+
+Instead of
+
+```http
+/user
+/order
+/product
+```
+
+This makes endpoints more predictable.
+
+---
+
+## 4. Use Hierarchical URLs for Relationships
+
+Represent relationships naturally.
+
+```http
+/users/15/orders
+/users/15/orders/8
+```
+
+Instead of
+
+```http
+/getOrdersForUser?id=15
+```
+
+Example:
+
+```http
+GET /users/10/posts
+```
+
+Returns all posts created by user 10.
+
+---
+
+## 5. Keep URLs Simple
+
+Avoid unnecessary nesting.
+
+Good:
+
+```http
+/orders/5/items
+```
+
+Too deep:
+
+```http
+/customers/10/orders/5/items/2/reviews/3/comments
+```
+
+Generally, avoid nesting more than two or three levels unless it clearly reflects the resource hierarchy.
+
+---
+
+## 6. Use Query Parameters for Filtering
+
+Don't create separate endpoints for every filter.
+
+Good:
+
+```http
+GET /products?category=laptop
+GET /products?priceMin=1000
+GET /products?sort=price
+GET /products?page=2&limit=20
+```
+
+Not:
+
+```http
+GET /products/category/laptop
+GET /cheapProducts
+```
+
+---
+
+## 7. Standardize Response Format
+
+Example success response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "John"
+  }
+}
+```
+
+Collection response:
+
+```json
+{
+  "success": true,
+  "count": 2,
+  "data": [
+    {
+      "id": 1,
+      "name": "John"
+    },
+    {
+      "id": 2,
+      "name": "Jane"
+    }
+  ]
+}
+```
+
+Error response:
+
+```json
+{
+  "success": false,
+  "message": "User not found",
+  "error": {
+    "code": "USER_NOT_FOUND"
+  }
+}
+```
+
+Keeping a consistent response structure simplifies client-side development.
+
+---
+
+## 8. Use Appropriate HTTP Status Codes
+
+| Status | Meaning                 |
+| ------ | ----------------------- |
+| 200    | Success                 |
+| 201    | Resource created        |
+| 204    | Success with no content |
+| 400    | Bad request             |
+| 401    | Unauthorized            |
+| 403    | Forbidden               |
+| 404    | Resource not found      |
+| 409    | Conflict                |
+| 422    | Validation failed       |
+| 500    | Internal server error   |
+
+Example:
+
+```javascript
+app.post("/users", (req, res) => {
+  const user = createUser(req.body);
+
+  res.status(201).json(user);
+});
+```
+
+---
+
+## 9. Version Your API
+
+Common approaches:
+
+```http
+/api/v1/users
+/api/v2/users
+```
+
+This allows you to introduce breaking changes without affecting existing clients.
+
+---
+
+## 10. Keep Naming Consistent
+
+Choose one naming style and use it throughout the API.
+
+Examples:
+
+```http
+/users
+/userProfiles
+```
+
+or
+
+```http
+/users
+/user-profiles
+```
+
+Avoid mixing styles:
+
+```http
+/user_profiles
+/userProfiles
+/user-profiles
+```
+
+A common convention is to use lowercase, hyphen-separated paths:
+
+```http
+/user-profiles
+/order-items
+```
+
+---
+
+## 11. Make Endpoints Predictable
+
+Once a pattern is established, apply it consistently.
+
+```http
+GET    /users
+GET    /products
+GET    /orders
+
+POST   /users
+POST   /products
+POST   /orders
+
+DELETE /users/:id
+DELETE /products/:id
+DELETE /orders/:id
+```
+
+Clients shouldn't have to guess endpoint structures.
+
+---
+
+## 12. Use Middleware for Cross-Cutting Concerns
+
+Avoid repeating logic in each route.
+
+```javascript
+app.use(express.json());
+app.use(authMiddleware);
+app.use(loggerMiddleware);
+```
+
+Routes remain focused on business logic:
+
+```javascript
+app.get("/users", getUsers);
+app.post("/users", createUser);
+```
+
+---
+
+## Express.js Example
+
+```javascript
+const express = require("express");
+const app = express();
+
+app.use(express.json());
+
+app.get("/users", getUsers);
+app.get("/users/:id", getUser);
+
+app.post("/users", createUser);
+
+app.put("/users/:id", replaceUser);
+
+app.patch("/users/:id", updateUser);
+
+app.delete("/users/:id", deleteUser);
+```
+
+This structure is clean, predictable, and easy to maintain.
+
+---
+
+# Best Practices
+
+- Use resource-oriented URLs (nouns instead of verbs).
+- Use the correct HTTP methods for each operation.
+- Keep URL naming conventions consistent (prefer lowercase and hyphens).
+- Use plural resource names.
+- Use query parameters for filtering, sorting, searching, and pagination.
+- Return meaningful HTTP status codes.
+- Maintain a consistent JSON response and error format.
+- Version APIs before introducing breaking changes.
+- Validate incoming requests and return clear validation errors.
+- Document the API (e.g., with OpenAPI/Swagger) so consumers understand available endpoints and schemas.
+- Keep business logic out of route handlers by using controllers, services, and middleware.
+
+---
+
+# Common Pitfalls
+
+- Using verbs in endpoint names (`/createUser`, `/deleteProduct`).
+- Returning `200 OK` for every response, including errors.
+- Mixing singular and plural resource names.
+- Inconsistent response structures across endpoints.
+- Embedding actions in URLs instead of using HTTP methods.
+- Overly deep nested routes that are difficult to understand.
+- Ignoring pagination for collection endpoints, leading to large responses.
+- Exposing internal implementation details in URLs or error messages.
+
+---
+
+# Alternative Approaches
+
+| Approach         | Advantages                                  | Disadvantages                                       |
+| ---------------- | ------------------------------------------- | --------------------------------------------------- |
+| Traditional REST | Standard, widely understood, cache-friendly | May require multiple requests for related resources |
+| GraphQL          | Clients request exactly the data they need  | More complex server implementation and caching      |
+| RPC-style APIs   | Simple for action-oriented operations       | Less resource-oriented and less RESTful             |
+
+For most Express.js applications, a well-designed REST API with consistent resource naming, proper HTTP methods, standardized responses, and clear versioning provides the best balance of simplicity, maintainability, and interoperability.
+
+---
+
+## Interview Tip
+
+In an interview, emphasize that **consistency is more important than personal preference**. A good REST API uses predictable resource-oriented URLs, correct HTTP methods, standard status codes, consistent request and response formats, validation, pagination, versioning, and centralized middleware. These practices make the API easier to consume, test, document, and maintain as it grows.
+
 ## Question 2. What is HATEOAS and is it commonly used in Express.js APIs?
 
 ## Question 3. How do you implement filtering and sorting in APIs?
