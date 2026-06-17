@@ -25,6 +25,181 @@
 
 ## Question 1. How do you monitor event loop lag in Node.js applications?
 
+**Short Answer:**
+You can monitor Node.js event loop lag using built-in `perf_hooks`, external monitoring tools (like Prometheus, Datadog, New Relic), or custom interval-based timers that measure delay in scheduled execution. The most accurate native approach is using `perf_hooks.monitorEventLoopDelay()`.
+
+---
+
+# 📌 Detailed Interview Explanation
+
+## 🧠 What is Event Loop Lag?
+
+Event loop lag (or latency) is the delay between when the event loop _should_ execute a callback and when it actually executes it. High lag indicates:
+
+- CPU saturation
+- Blocking synchronous code
+- Heavy GC pressure
+- Poorly optimized I/O handling
+
+In production, it’s a key metric for Node.js performance health.
+
+---
+
+# 🚀 1. Using `perf_hooks.monitorEventLoopDelay()` (Recommended)
+
+Node.js provides a built-in, high-resolution API for measuring event loop delay.
+
+### Example:
+
+```js
+const { monitorEventLoopDelay } = require("perf_hooks");
+
+const h = monitorEventLoopDelay({ resolution: 20 });
+h.enable();
+
+// Log every 5 seconds
+setInterval(() => {
+  console.log({
+    min: h.min / 1e6, // ms
+    max: h.max / 1e6,
+    mean: h.mean / 1e6,
+    p99: h.percentile(99) / 1e6,
+  });
+
+  h.reset();
+}, 5000);
+```
+
+---
+
+## 📊 Why this is best:
+
+- Measures actual scheduling delay inside event loop
+- High-resolution histogram-based metrics
+- No external dependencies
+- Suitable for production monitoring
+
+---
+
+## ⚠️ Common Pitfall:
+
+- Forgetting to call `h.enable()` → returns zeros
+- Not resetting histogram → misleading cumulative stats
+
+---
+
+# 🧪 2. Simple Custom Lag Detection (SetTimeout Drift)
+
+This is a classic interview approach.
+
+### Example:
+
+```js
+const interval = 100;
+
+setInterval(() => {
+  const start = Date.now();
+
+  setTimeout(() => {
+    const lag = Date.now() - start - interval;
+    console.log(`Event loop lag: ${lag}ms`);
+  }, interval);
+}, interval);
+```
+
+---
+
+## ⚠️ Limitations:
+
+- Less accurate than `perf_hooks`
+- Sensitive to system scheduling noise
+- Not ideal for production metrics
+
+---
+
+# 📡 3. Production Monitoring Tools
+
+In real-world systems, event loop lag is often exported as a metric:
+
+## Popular tools:
+
+- **Prometheus + prom-client**
+- **Datadog APM**
+- **New Relic**
+- **Elastic APM**
+
+### Example with Prometheus:
+
+```js
+const client = require("prom-client");
+const { monitorEventLoopDelay } = require("perf_hooks");
+
+const histogram = new client.Histogram({
+  name: "event_loop_lag_ms",
+  help: "Event loop lag in ms",
+});
+
+const h = monitorEventLoopDelay();
+h.enable();
+
+setInterval(() => {
+  histogram.observe(h.mean / 1e6);
+  h.reset();
+}, 5000);
+```
+
+---
+
+# ⚙️ 4. Node.js Internal Signals (Indirect Indicators)
+
+While not direct lag measurement, these help detect symptoms:
+
+- CPU usage (`process.cpuUsage()`)
+- Garbage collection logs (`--trace-gc`)
+- libuv threadpool saturation
+- Response latency (HTTP middleware timing)
+
+---
+
+# 🚨 Common Causes of Event Loop Lag
+
+Interviewers often expect this follow-up:
+
+### 1. Blocking synchronous code
+
+```js
+while (true) {} // 💥 blocks event loop
+```
+
+### 2. Heavy JSON parsing or computation
+
+### 3. Large synchronous loops
+
+### 4. CPU-bound crypto operations
+
+### 5. GC pressure from memory leaks
+
+---
+
+# 🧠 Best Practices (Senior-Level Answer)
+
+- Always prefer `perf_hooks.monitorEventLoopDelay()` in production
+- Export metrics to a monitoring system (Prometheus/APM)
+- Set alert thresholds (e.g., p99 > 50ms)
+- Correlate lag with CPU/memory metrics
+- Break heavy CPU work into worker threads (`worker_threads` module)
+
+---
+
+# 🆚 Comparison Summary
+
+| Method                             | Accuracy   | Production Ready | Notes              |
+| ---------------------------------- | ---------- | ---------------- | ------------------ |
+| `perf_hooks.monitorEventLoopDelay` | ⭐⭐⭐⭐⭐ | ✅ Yes           | Best option        |
+| setTimeout drift                   | ⭐⭐       | ⚠️ Limited       | Educational/demo   |
+| APM tools                          | ⭐⭐⭐⭐⭐ | ✅ Yes           | Best observability |
+| CPU/memory heuristics              | ⭐⭐       | ⚠️ Indirect      | Supportive only    |
+
 ## Question 2. How do you optimize Express.js applications for low latency under heavy traffic?
 
 ## Question 3. How would you implement circuit breakers in Express.js microservices?
