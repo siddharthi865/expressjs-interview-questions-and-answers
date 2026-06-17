@@ -25,6 +25,142 @@
 
 ## Question 1. How do you send JSON responses in Express.js?
 
+**Short answer:**
+In Express.js, you send JSON responses using the `res.json()` method, which automatically serializes a JavaScript object into JSON and sets the correct `Content-Type` header.
+
+---
+
+## Detailed Interview-Style Explanation
+
+In Express.js, handling HTTP responses is done through the `res` (response) object. When building REST APIs, JSON is the standard format for communication between client and server. Express provides a built-in helper method specifically for this: **`res.json()`**.
+
+### 1. Using `res.json()` (Recommended Approach)
+
+This is the most common and best practice way.
+
+```javascript
+const express = require("express");
+const app = express();
+
+app.get("/user", (req, res) => {
+  res.json({
+    id: 1,
+    name: "John Doe",
+    role: "developer",
+  });
+});
+```
+
+### What happens internally:
+
+- The object is converted to a JSON string using `JSON.stringify()`
+- The `Content-Type` header is automatically set to:
+
+  ```
+  application/json
+  ```
+
+- The response is sent to the client
+
+---
+
+### 2. Difference Between `res.json()` and `res.send()`
+
+While both can send JSON, there are subtle differences:
+
+#### `res.json()`
+
+- Explicitly intended for JSON responses
+- Always sets correct headers
+- Converts non-object inputs safely into JSON
+
+#### `res.send()`
+
+- More generic (can send strings, buffers, objects)
+- If you pass an object, Express internally converts it to JSON, but behavior is less explicit
+
+```javascript
+res.send({ message: "Hello" }); // works, but less explicit
+res.json({ message: "Hello" }); // preferred
+```
+
+👉 **Best practice:** Always use `res.json()` for API responses.
+
+---
+
+### 3. Sending Status Codes with JSON
+
+You can chain methods for cleaner API responses:
+
+```javascript
+app.post("/login", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Login successful",
+  });
+});
+```
+
+Or for errors:
+
+```javascript
+res.status(400).json({
+  success: false,
+  error: "Invalid credentials",
+});
+```
+
+---
+
+### 4. Returning Arrays or Complex Data
+
+Express handles arrays and nested objects seamlessly:
+
+```javascript
+app.get("/products", (req, res) => {
+  res.json([
+    { id: 1, name: "Laptop" },
+    { id: 2, name: "Phone" },
+  ]);
+});
+```
+
+---
+
+### 5. Common Pitfalls
+
+#### ❌ Not using proper status codes
+
+Always pair JSON responses with meaningful HTTP status codes.
+
+#### ❌ Sending multiple responses
+
+You can only send one response per request. Calling `res.json()` twice will throw an error.
+
+#### ❌ Circular objects
+
+Trying to send circular references will crash serialization.
+
+---
+
+### 6. Best Practices (Interview-Ready Points)
+
+- Always use `res.json()` for APIs
+- Structure responses consistently (e.g., `{ success, data, message }`)
+- Use appropriate HTTP status codes
+- Avoid leaking sensitive information in JSON responses
+- Centralize error handling using middleware for consistent JSON error format
+
+Example standardized response:
+
+```javascript
+res.json({
+  success: true,
+  data: user,
+  message: "User fetched successfully",
+});
+```
+
 ## Question 2. What is the purpose of status codes in API responses?
 
 ## Question 3. How do you set custom headers in Express.js?
